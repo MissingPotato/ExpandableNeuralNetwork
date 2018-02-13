@@ -209,6 +209,23 @@ public class NNB {
 
 		// We start backtracing, calculating the second to last, the third to last, ( and so on ) layer's weights
 
+		for ( int i = 1; i < LayerCOUNT; i++ ) // Looping the layers, we start from 1 because of the input layer from above ( already calculated 
+			for ( int j = 0; j < hiddenNodesCOUNT; j++ ) {
+				for (int m = 0; m < hiddenNodesCOUNT; m++) // Loop thru previous nodes
+					for (int k = 0; k < hiddenNodesCOUNT; k++) // Loop thru weights
+						hiddenNode[i, j] += hiddenNode[i - 1, m] * weights [ i - 1, m, k ];
+				
+				hiddenPred[i, j] = hiddenNode[i, j];
+				hiddenNode[i, j] = Sigmoid(hiddenNode[i , j]);
+			}
+
+
+		for ( int i = LayerCOUNT; i > 1; i-- )
+			for ( int j = hiddenNodesCOUNT; j >= 0; j-- )
+				for ( int m = hiddenNodesCOUNT; m >= 0; m-- )
+					for ( int k = 0; k < hiddenNodesCOUNT; k++ )
+						// weights[i, j, k] = 
+
 
 	}
 
