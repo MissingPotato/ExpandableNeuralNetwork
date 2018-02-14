@@ -28,6 +28,10 @@ public class NeuralNetworkB : MonoBehaviour {
 	[Range(0f, 1f)]
 	public float learningRate = 0.1f;
 
+	[Tooltip("The NeuralNetwork's target value")]
+	[Range(0f, 1f)]
+	public float targetValue;
+
 /*	To do for version C ( More outputs )
 
 	[Tooltip("The neural network's output")]
@@ -47,14 +51,19 @@ public class NeuralNetworkB : MonoBehaviour {
 	
 	void Awake () {
 		NeuralDebug();		
-
 	}
 	
 	void Update () {
 		
-		if ( Input.GetKeyDown ( KeyCode.Q ) )
-			neuralNetwork.Train(1f, neuralNetwork.Predict());
+		if ( Input.GetKey ( KeyCode.Q ) ){
+			float pred = neuralNetwork.Predict();
+			neuralNetwork.Train(targetValue, pred);
+			float newPred = neuralNetwork.Predict();
+			Debug.Log("OldPred: " + pred + "   " + neuralNetwork.Sigmoid(pred) + "\n NewPred: " + newPred  + "   " + neuralNetwork.Sigmoid( newPred ) );
 
+			outPut = neuralNetwork.Sigmoid( newPred );
+
+		}
 	}
 	
 	#endregion
@@ -119,6 +128,10 @@ public class NNB {
 				for (int k = 0; k < hiddenNodesCOUNT; k++)
 				{
 					weights [ i , j , k ] = (float)rand.NextDouble();
+
+					if ( rand.Next(0, 11) > 5)
+						weights [ i , j , k ] *= -1;
+
 				}
 			}
 		}
@@ -133,12 +146,6 @@ public class NNB {
 			inputNode[i] = (float)rand.NextDouble();
 			Debug.Log("Input Node[" + i + "]: " + inputNode[i]);
 		}
-
-		Debug.Log("Finished random input initialization!");
-
-		Debug.Log("Pred: " + Sigmoid( Predict() ) );
-		Debug.Log("RawPred: " + Predict() );
-		Debug.Log("This prediction is not based on any kind of target!");
 
 		// :: DEBUG ::
 	}
@@ -157,26 +164,24 @@ public class NNB {
 
 		// Calculate the first hidden layer
 
-		// i = Node
-		for ( int i = 0; i < inputNodesCOUNT; i++){ // we are looping thru all the hidden nodes from the first layer
+		// i = input node
+		for ( int i = 0; i < hiddenNodesCOUNT; i++){ // we are looping thru all the hidden nodes from the first layer
 			
-			// j = Weight
-			for ( int j = 0; j < inputNodesCOUNT; j++) // Looping all the weights
-				hiddenNode[0, i] += inputNode[i] * inputWeights[i, j]; // Calculate the prediction
+			// j = hidden node
+			for ( int j = 0; j < inputNodesCOUNT; j++) // Looping thru the hidden nodes
+				hiddenNode[0, i] += inputNode[j] * inputWeights[j, i]; // Calculate the prediction
 		
 			hiddenPred[0, i] = hiddenNode[0, i];
 			hiddenNode[0, i] = Sigmoid(hiddenNode[0, i]); // We set the hidden node
 		}
 
 		// Calculate the rest of the hidden layer nodes values
-
-		// i = Layer   j = Node   k = weight   m = second node
+		// i = Layer   j = Node   k = weight 
 		for ( int i = 1; i < LayerCOUNT; i++ ) // Looping the layers, we start from 1 because of the input layer from above ( already calculated 
 			for ( int j = 0; j < hiddenNodesCOUNT; j++ ) {
-				for (int m = 0; m < hiddenNodesCOUNT; m++) // Loop thru previous nodes
-					for (int k = 0; k < hiddenNodesCOUNT; k++) // Loop thru weights
-						hiddenNode[i, j] += hiddenNode[i - 1, m] * weights [ i - 1, m, k ];
-				
+				for (int k = 0; k < hiddenNodesCOUNT; k++) // Loop thru weights
+					hiddenNode[i, j] += hiddenNode[i - 1, k] * weights [ i - 1, k, j ];
+			
 				hiddenPred[i, j] = hiddenNode[i, j];
 				hiddenNode[i, j] = Sigmoid(hiddenNode[i , j]);
 			}
@@ -185,11 +190,10 @@ public class NNB {
 
 		for (int i = 0; i < hiddenNodesCOUNT; i++)
 		{
-			outPutNode += hiddenNode[LayerCOUNT - 1, i] * weights [ LayerCOUNT - 1, i, i];
+			outPutNode += hiddenNode[LayerCOUNT - 1, i] * weights [ LayerCOUNT - 1, i, 0];
 		}
 
-		return outPutNode; // Placeholder value
-
+		return outPutNode;
 	}
 
 	/// <summary>
@@ -199,32 +203,45 @@ public class NNB {
 	public void Train(float _answer, float _prediction){
 
 		float prediction = _prediction; // We save the prediction just in case
-
 		float cost = 2 * ( Sigmoid ( prediction ) - _answer ); // Calculating the cost for the last layer
 
+		// Last layer's outputs corrected.
 		for (int i = 0; i < hiddenNodesCOUNT; i++) // Looping thru the nodes from the last layer
 		{
-			weights [ LayerCOUNT - 1, i, i] = weights[ LayerCOUNT - 1, i, i] - learningRate * ( cost * SigDer ( _answer ) * weights[ LayerCOUNT - 1, i, i] ) ; // ReCalculating the last layer of weights
+			weights [ LayerCOUNT - 1, i, 0] = weights[ LayerCOUNT - 1, i, 0] - learningRate * ( cost * SigDer ( _answer ) * weights[ LayerCOUNT - 1, i, 0] ) ; // ReCalculating the last layer of weights
 		}
 
-		// We start backtracing, calculating the second to last, the third to last, ( and so on ) layer's weights
+		// We start from beginning to end to correct ( well, from the first hidden layer, we deal with the input's layers after.)
 
-		for ( int i = 1; i < LayerCOUNT; i++ ) // Looping the layers, we start from 1 because of the input layer from above ( already calculated 
-			for ( int j = 0; j < hiddenNodesCOUNT; j++ ) {
+		if ( LayerCOUNT > 1 ){ //
+
+		for ( int i = 1; i < LayerCOUNT - 1; i++ ) // Looping the layers, we start from the last one because we want to backtrace our information and update the weights!
+			for ( int j = 0; j < hiddenNodesCOUNT; j++ ){ // The node
 				for (int m = 0; m < hiddenNodesCOUNT; m++) // Loop thru previous nodes
-					for (int k = 0; k < hiddenNodesCOUNT; k++) // Loop thru weights
-						hiddenNode[i, j] += hiddenNode[i - 1, m] * weights [ i - 1, m, k ];
+					for ( int k = 0; k < hiddenNodesCOUNT - 1; k++ ){ // The weight
+						
+						cost = 2 * (  hiddenPred[i, k] - _answer ); // Recalculating the cost
+					
+						weights [ i, j, k] = weights [ i, j, k ] - learningRate * ( cost * SigDer ( hiddenPred[i + 1, k] ) * weights [ i, j, k ] );
+
+					}
+			}
+		
+		} // 
+	
+
+		// We start fixing the input layer's weights
+
+		// i = input node     j = input node's weight
+		for (int i = 0; i < inputNodesCOUNT; i++){ // The amount of input nodes
+			for (int j = 0; j < hiddenNodesCOUNT; j++){ // The amount of hidden nodes
 				
-				hiddenPred[i, j] = hiddenNode[i, j];
-				hiddenNode[i, j] = Sigmoid(hiddenNode[i , j]);
+				cost = 2 * ( hiddenPred [0 , j] - _answer ); // Recalculating the cost
+				
+				inputWeights[i, j] = inputWeights[i, j] - learningRate * ( cost * SigDer (hiddenPred [0 , j]) * inputWeights[i, j] );
 			}
 
-
-		for ( int i = LayerCOUNT; i > 1; i-- )
-			for ( int j = hiddenNodesCOUNT; j >= 0; j-- )
-				for ( int m = hiddenNodesCOUNT; m >= 0; m-- )
-					for ( int k = 0; k < hiddenNodesCOUNT; k++ )
-						// weights[i, j, k] = 
+		}
 
 
 	}

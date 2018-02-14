@@ -140,10 +140,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f53f18516c8fa9d428b9b43bbfbc02aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  inputSize: 2
+  inputSize: 5
   hiddenLayers: 2
-  hiddenNodes: 4
-  learningRate: 0.01
+  hiddenNodes: 3
+  learningRate: 0.005
+  targetValue: 0.359
   outPut: 0
 --- !u!4 &1020932334
 Transform:
