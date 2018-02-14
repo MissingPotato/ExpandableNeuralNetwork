@@ -23,6 +23,9 @@ public class StagingNeuralNetworkA : MonoBehaviour {
 	[Range(1, 500)]
 	public int trainAmount;
 
+	[Range(0f, 1f)]
+	public float target;
+
 	NNA neuralNetowrk;
 
 	#endregion
@@ -38,7 +41,7 @@ public class StagingNeuralNetworkA : MonoBehaviour {
 	void Update () {
 		
 		if ( Input.GetKeyDown(KeyCode.Return))
-			neuralNetowrk.Train( 1f , trainAmount );
+			neuralNetowrk.Train( target , trainAmount );
 			//				Target	 TrainAmount
 	}
 	
